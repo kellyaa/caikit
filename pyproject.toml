@@ -33,6 +33,7 @@ dependencies = [
     "wheel>=0.37.0",
     "jtd-to-proto>=0.12.1,<0.13.0",
     "import-tracker>=3.1.5,<4",
+    "ray>-2.3.1"
 ]
 
 [project.urls]

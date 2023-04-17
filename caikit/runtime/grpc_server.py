@@ -24,6 +24,7 @@ from grpc_health.v1 import health, health_pb2_grpc
 from prometheus_client import start_http_server
 from py_grpc_prometheus.prometheus_server_interceptor import PromServerInterceptor
 import grpc
+import ray
 
 # First Party
 import aconfig
@@ -145,6 +146,9 @@ class RuntimeGRPCServer:
             experimental_thread_pool=futures.ThreadPoolExecutor(max_workers=1),
         )
         health_pb2_grpc.add_HealthServicer_to_server(health_srvcer, self.server)
+
+        # Initialize Ray
+        ray.init()
 
         # Listen on a unix socket as well for model mesh.
         try:
