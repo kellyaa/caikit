@@ -7,15 +7,15 @@ service_generation:
     client_package_name: ""
     module_types:
         included: ["blocks", "workflows"]
-    modules:
+    module_guids:
+        included: []
         excluded: []
     primitive_data_model_types: []
     task_types:
+        included: []
         excluded: []
 
 use_abortable_threads: true
-
-strict_rpc_mode: false
 
 metering:
     # Switch off metering by default
@@ -127,7 +127,6 @@ server_shutdown_grace_period_seconds: 45
 # Per-environment configurations
 environment: prod
 test:
-    grpc_server_sleep_interval: 1
     find_available_port: true
     runtime_version: mock
     caikit_library: sample_lib
@@ -143,21 +142,21 @@ test:
         client_package_name: ""
         module_types:
             included: ["blocks", "workflows"]
-        modules:
+        module_guids:
+            included: []
             excluded: []
         primitive_data_model_types:
             - "sample_lib.data_model.SampleInputType"
         task_types:
+            included: []
             excluded: []
     # training configs for tests
     training:
         auto_load_trained_model: true
         output_dir: test/training_output
 dev:
-    grpc_server_sleep_interval: 45
     runtime_version: real_implementation
 prod:
-    grpc_server_sleep_interval: 45
     runtime_version: real
 
 # TLS configs

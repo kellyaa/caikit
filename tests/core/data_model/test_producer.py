@@ -12,17 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Helper functions for performance computations.
-"""
+"""Tests for producer"""
+
+# Local
+from caikit.core.data_model.producer import ProducerId
 
 
-def kilo_chars_per_second(text_len, iterations, seconds):
-    return text_len * iterations / 1000 / seconds
+def test_add_producer_ids():
+    prod_id_1 = ProducerId("foo", "1.2.3")
+    prod_id_2 = ProducerId("bar", "1.2.3")
+    producer = prod_id_1 + prod_id_2
+    assert producer.name == "foo & bar"
 
 
-def kilo_chars_per_second_text(text, iterations, seconds):
-    return kilo_chars_per_second(len(text), iterations, seconds)
-
-
-def iterations_per_second(iterations, seconds):
-    return iterations / seconds
+def test_proto_roundtrip():
+    prod_id = ProducerId("foo", "1.2.3")
+    prod_id_roundtrip = ProducerId.from_proto(prod_id.to_proto())
+    assert prod_id.name == prod_id_roundtrip.name
+    assert prod_id.version == prod_id_roundtrip.version
