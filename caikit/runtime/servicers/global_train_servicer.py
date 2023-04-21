@@ -26,6 +26,7 @@ import traceback
 from google.protobuf.descriptor import FieldDescriptor
 from grpc import StatusCode
 import grpc
+import ray
 
 # First Party
 import alog
@@ -201,28 +202,35 @@ class GlobalTrainServicer:
         kwargs = {
             "module_class": model,
             "model_path": model_path,
+            "run_remote": True,
             **build_caikit_library_request_dict(request, model.train),
         }
 
         # If running with a subprocess, set the target and args accordingly
         target = (
-            self._train_and_save_model_subproc
-            if self.use_subprocess
-            else self._train_and_save_model
+            #self._train_and_save_model_subproc
+            #if self.use_subprocess
+            #else 
+            self._train_and_save_model
         )
         log.debug2(
             "Training with %s",
             "SUBPROCESS" if self.use_subprocess else "MAIN PROCESS",
         )
 
+
         # start training asynchronously
         thread_future = self.run_async(
             runnable_func=target,
             kwargs=kwargs,
+            run_remote=True,
             model_name=model_name,
             model_path=model_path,
         )
         self.training_map[training_id] = thread_future
+
+
+
 
         # if requested, block until the training completes
         if wait:
@@ -238,10 +246,15 @@ class GlobalTrainServicer:
         self,
         runnable_func,
         kwargs,
+        run_remote,
         model_name,
         model_path,
     ) -> concurrent.futures.Future:
         """Runs the train function in a thread and saves the trained model in a callback"""
+        if run_remote:
+            runnable_func = ray.remote(runnable_func)
+
+
         if self.auto_load_trained_model:
 
             def target(*args, **kwargs):
@@ -287,6 +300,7 @@ class GlobalTrainServicer:
     def _train_and_save_model(
         module_class: Type[ModuleBase],
         model_path: str,
+        run_remote: bool,
         *args,
         **kwargs,
     ):
@@ -294,11 +308,19 @@ class GlobalTrainServicer:
         subprocess if needed
         """
         try:
+
+            log.info("Going to call train function remotely!")
+            module_class = ray.remote(module_class)
+
+
             # Train it
             with alog.ContextTimer(
                 log.debug, "Done training %s in: ", module_class.__name__
             ):
-                model = module_class.train(*args, **kwargs)
+                #if run_remote:
+                model = module_class.train.remote(*args, **kwargs)
+                #else:
+                  #  model = module_class.train(*args, **kwargs)
 
             # Save it
             with alog.ContextTimer(
