@@ -148,7 +148,7 @@ class RuntimeGRPCServer:
         health_pb2_grpc.add_HealthServicer_to_server(health_srvcer, self.server)
 
         # Initialize Ray
-        ray.init()
+        ray.init(address="ray://host.docker.internal:10001")
 
         # Listen on a unix socket as well for model mesh.
         try:

@@ -202,7 +202,7 @@ class GlobalTrainServicer:
         kwargs = {
             "module_class": model,
             "model_path": model_path,
-            "run_remote": True,
+            "base_model" : model_name,
             **build_caikit_library_request_dict(request, model.train),
         }
 
@@ -223,7 +223,6 @@ class GlobalTrainServicer:
         thread_future = self.run_async(
             runnable_func=target,
             kwargs=kwargs,
-            run_remote=True,
             model_name=model_name,
             model_path=model_path,
         )
@@ -246,13 +245,10 @@ class GlobalTrainServicer:
         self,
         runnable_func,
         kwargs,
-        run_remote,
         model_name,
         model_path,
     ) -> concurrent.futures.Future:
         """Runs the train function in a thread and saves the trained model in a callback"""
-        if run_remote:
-            runnable_func = ray.remote(runnable_func)
 
 
         if self.auto_load_trained_model:
@@ -300,28 +296,33 @@ class GlobalTrainServicer:
     def _train_and_save_model(
         module_class: Type[ModuleBase],
         model_path: str,
-        run_remote: bool,
         *args,
         **kwargs,
     ):
         """This function performs a single training and can be run inside a
         subprocess if needed
         """
-        try:
 
-            log.info("Going to call train function remotely!")
-            module_class = ray.remote(module_class)
+        try:
+            remote_class = ray.remote(module_class).remote()
+
+            # This is a HACK for issues we had with the class 
+            # DataStreamSourceGenerationTrainRecord not being recognized by Ray
+            train_stream = kwargs['train_stream'].eager()
+            kwargs['train_stream'] = train_stream
+            # Need to add a check if val_stream has null values, and if so then remove from kwargs
+            del kwargs['val_stream']
 
 
             # Train it
             with alog.ContextTimer(
                 log.debug, "Done training %s in: ", module_class.__name__
             ):
-                #if run_remote:
-                model = module_class.train.remote(*args, **kwargs)
-                #else:
-                  #  model = module_class.train(*args, **kwargs)
+                training = remote_class.train.remote(*args, **kwargs)
+                log.info("Started ray job")
+                model = ray.get(training)
 
+            log.info("Attempting to save")
             # Save it
             with alog.ContextTimer(
                 log.debug,
